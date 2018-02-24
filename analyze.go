@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"sort"
 	"time"
 
 	"github.com/marcusolsson/tui-go"
 )
 
 type ItemInfo struct {
+	name   string
 	size   int64
 	isDir  bool
-	subDir map[string]*ItemInfo
+	subDir []ItemInfo
 }
 
 type CurrentProgress struct {
@@ -22,16 +24,22 @@ type CurrentProgress struct {
 	done            bool
 }
 
-func processDir(dir string, itemCount int, totalSize int64, statusChannel chan<- CurrentProgress) (map[string]*ItemInfo, int, int64) {
-	dirStats := make(map[string]*ItemInfo)
+type BySize []ItemInfo
+func (a BySize) Len() int           { return len(a) }
+func (a BySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a BySize) Less(i, j int) bool { return a[i].size < a[j].size }
 
+func processDir(dir string, itemCount int, totalSize int64, statusChannel chan<- CurrentProgress) ([]ItemInfo, int, int64) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return dirStats, itemCount, totalSize
+		return nil, itemCount, totalSize
 	}
 
-	for _, f := range files {
-		dirStats[f.Name()] = &ItemInfo{
+	dirStats := make([]ItemInfo, len(files))
+
+	for i, f := range files {
+		info := ItemInfo{
+			name: f.Name(),
 			isDir: f.IsDir(),
 		}
 		if f.IsDir() {
@@ -41,8 +49,8 @@ func processDir(dir string, itemCount int, totalSize int64, statusChannel chan<-
 				totalSize,
 				statusChannel,
 			)
-			dirStats[f.Name()].size = subDirSize
-			dirStats[f.Name()].subDir = subDirStats
+			info.size = subDirSize
+			info.subDir = subDirStats
 			itemCount = subDirItemCount
 			totalSize = subDirSize
 
@@ -55,9 +63,10 @@ func processDir(dir string, itemCount int, totalSize int64, statusChannel chan<-
 			default:
 			}
 		} else {
-			dirStats[f.Name()].size = f.Size()
+			info.size = f.Size()
 			totalSize += f.Size()
 		}
+		dirStats[i] = info
 		itemCount += 1
 	}
 	return dirStats, itemCount, totalSize
@@ -91,6 +100,7 @@ func processTopDir(dir string, ui tui.UI, currentItemLabel *tui.Label, statsLabe
 		0,
 		statusChannel,
 	)
+	sort.Sort(sort.Reverse(BySize(dirStats)))
 
 	statusChannel <- CurrentProgress{done: true}
 
@@ -105,9 +115,9 @@ func processTopDir(dir string, ui tui.UI, currentItemLabel *tui.Label, statsLabe
 				totalItemCount,
 			))
 
-		for name, item := range dirStats {
+		for _, item := range dirStats {
 			list.AppendRow(
-				tui.NewLabel(name),
+				tui.NewLabel(item.name),
 				tui.NewLabel(formatSize(item.size)),
 			)
 		}
