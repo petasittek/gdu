@@ -14,3 +14,10 @@ func formatSize(size int64) string {
     }
     return fmt.Sprintf("%d B", size)
 }
+
+func formatItemName(item ItemInfo) string {
+    if item.isDir {
+        return "/" + item.name
+    }
+    return " " + item.name
+}

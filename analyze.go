@@ -14,7 +14,14 @@ type ItemInfo struct {
 	name   string
 	size   int64
 	isDir  bool
-	subDir []ItemInfo
+	subDir DirInfo
+}
+
+type DirInfo struct {
+	items          []ItemInfo
+	parentDir      *DirInfo
+	totalSize      int64
+	totalItemCount int
 }
 
 type CurrentProgress struct {
@@ -29,13 +36,20 @@ func (a BySize) Len() int           { return len(a) }
 func (a BySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a BySize) Less(i, j int) bool { return a[i].size < a[j].size }
 
-func processDir(dir string, itemCount int, totalSize int64, statusChannel chan<- CurrentProgress) ([]ItemInfo, int, int64) {
+func processDir(dir string, parentDir DirInfo, statusChannel chan<- CurrentProgress) DirInfo {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return nil, itemCount, totalSize
+		return DirInfo{}
 	}
 
-	dirStats := make([]ItemInfo, len(files))
+	dirStats := DirInfo{
+		items: make([]ItemInfo, len(files)),
+		totalSize: parentDir.totalSize,
+		totalItemCount: parentDir.totalItemCount,
+	}
+	if len(parentDir.items) > 0 {
+		dirStats.parentDir = &parentDir
+	}
 
 	for i, f := range files {
 		info := ItemInfo{
@@ -43,33 +57,33 @@ func processDir(dir string, itemCount int, totalSize int64, statusChannel chan<-
 			isDir: f.IsDir(),
 		}
 		if f.IsDir() {
-			subDirStats, subDirItemCount, subDirSize := processDir(
+			subDirStats := processDir(
 				path.Join(dir, f.Name()),
-				itemCount,
-				totalSize,
+				dirStats,
 				statusChannel,
 			)
-			info.size = subDirSize
+			info.size = subDirStats.totalSize
 			info.subDir = subDirStats
-			itemCount = subDirItemCount
-			totalSize = subDirSize
+			dirStats.totalItemCount = subDirStats.totalItemCount
+			dirStats.totalSize = subDirStats.totalSize
 
 			select {
 			case statusChannel <- CurrentProgress{
 				currentItemName: f.Name(),
-				itemCount:       itemCount,
-				totalSize:       totalSize,
+				itemCount:       dirStats.totalItemCount,
+				totalSize:       dirStats.totalSize,
 			}:
 			default:
 			}
 		} else {
 			info.size = f.Size()
-			totalSize += f.Size()
+			dirStats.totalSize += f.Size()
 		}
-		dirStats[i] = info
-		itemCount += 1
+		dirStats.items[i] = info
+		dirStats.totalItemCount += 1
 	}
-	return dirStats, itemCount, totalSize
+	sort.Sort(sort.Reverse(BySize(dirStats.items)))
+	return dirStats
 }
 
 func updateCurrentProgress(ui tui.UI, currentItemLabel *tui.Label, statsLabel *tui.Label, statusChannel <-chan CurrentProgress) {
@@ -89,50 +103,18 @@ func updateCurrentProgress(ui tui.UI, currentItemLabel *tui.Label, statsLabel *t
 	}
 }
 
-func processTopDir(dir string, ui tui.UI, currentItemLabel *tui.Label, statsLabel *tui.Label) {
+func processTopDir(dir string, ui tui.UI, currentItemLabel *tui.Label, statsLabel *tui.Label) DirInfo {
 	statusChannel := make(chan CurrentProgress)
 
 	go updateCurrentProgress(ui, currentItemLabel, statsLabel, statusChannel)
 
-	dirStats, totalItemCount, totalDirSize := processDir(
+	dirStats := processDir(
 		dir,
-		0,
-		0,
+		DirInfo{},
 		statusChannel,
 	)
-	sort.Sort(sort.Reverse(BySize(dirStats)))
 
 	statusChannel <- CurrentProgress{done: true}
 
-	ui.Update(func() {
-		root, list, status := CreateListWindow()
-		ui.SetWidget(root)
-
-		status.SetText(
-			fmt.Sprintf(
-				"Apparent size: %v Items: %d",
-				formatSize(totalDirSize),
-				totalItemCount,
-			))
-
-		biggestItemSize := dirStats[0].size
-		for _, item := range dirStats {
-			part := float64(item.size) / float64(biggestItemSize) * 10.0
-
-			list.AppendRow(
-				NewMinSizeLabel(
-					fmt.Sprintf(
-						"%10s",
-						formatSize(item.size),
-					),
-				),
-				NewSizeRatio(int(part)),
-				NewMinSizeLabel(item.name),
-				tui.NewSpacer(),
-			)
-		}
-
-		ui.SetKeybinding("PgUp", func() { list.Select(0) })
-		ui.SetKeybinding("PgDn", func() { list.Select(len(dirStats) - 1) })
-	})
+	return dirStats
 }

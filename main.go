@@ -22,7 +22,12 @@ func main() {
 	ui.SetKeybinding("Esc", func() { ui.Quit() })
 	ui.SetKeybinding("q", func() { ui.Quit() })
 
-	go processTopDir(dir, ui, currentItemLabel, statsLabel)
+	go func() {
+		dirStats := processTopDir(dir, ui, currentItemLabel, statsLabel)
+		ui.Update(func() {
+			showDir(ui, dirStats)
+		})
+	}()
 
 	if err := ui.Run(); err != nil {
 		log.Fatal(err)
