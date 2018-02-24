@@ -110,16 +110,29 @@ func processTopDir(dir string, ui tui.UI, currentItemLabel *tui.Label, statsLabe
 
 		status.SetText(
 			fmt.Sprintf(
-				"Apparent size: %d Items: %d",
-				totalDirSize,
+				"Apparent size: %v Items: %d",
+				formatSize(totalDirSize),
 				totalItemCount,
 			))
 
+		biggestItemSize := dirStats[0].size
 		for _, item := range dirStats {
+			part := float64(item.size) / float64(biggestItemSize) * 10.0
+
 			list.AppendRow(
-				tui.NewLabel(item.name),
-				tui.NewLabel(formatSize(item.size)),
+				NewMinSizeLabel(
+					fmt.Sprintf(
+						"%10s",
+						formatSize(item.size),
+					),
+				),
+				NewSizeRatio(int(part)),
+				NewMinSizeLabel(item.name),
+				tui.NewSpacer(),
 			)
 		}
+
+		ui.SetKeybinding("PgUp", func() { list.Select(0) })
+		ui.SetKeybinding("PgDn", func() { list.Select(len(dirStats) - 1) })
 	})
 }
