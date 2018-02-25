@@ -19,10 +19,10 @@ type ItemInfo struct {
 }
 
 type DirInfo struct {
-	items          []ItemInfo
-	parentDir      *DirInfo
-	size           int64
-	itemCount      int
+	items     []ItemInfo
+	parentDir *DirInfo
+	size      int64
+	itemCount int
 
 	// only for current progress stats
 	totalSize      int64
@@ -37,8 +37,9 @@ type CurrentProgress struct {
 }
 
 type BySize []ItemInfo
-func (a BySize) Len() int           { return len(a) }
-func (a BySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
+func (a BySize) Len() int      { return len(a) }
+func (a BySize) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a BySize) Less(i, j int) bool {
 	iSize := a[i].size
 	jSize := a[j].size
@@ -58,10 +59,10 @@ func processDir(dir string, parentDir *DirInfo, statusChannel chan<- CurrentProg
 	}
 
 	dirStats := &DirInfo{
-		items: make([]ItemInfo, len(files)),
-		size: 0,
-		itemCount: 0,
-		totalSize: parentDir.totalSize,
+		items:          make([]ItemInfo, len(files)),
+		size:           0,
+		itemCount:      0,
+		totalSize:      parentDir.totalSize,
 		totalItemCount: parentDir.totalItemCount,
 	}
 
@@ -73,9 +74,9 @@ func processDir(dir string, parentDir *DirInfo, statusChannel chan<- CurrentProg
 		path, _ := filepath.Abs(filepath.Join(dir, f.Name()))
 
 		info := ItemInfo{
-			name: f.Name(),
+			name:  f.Name(),
 			isDir: f.IsDir(),
-			path: path,
+			path:  path,
 		}
 		if f.IsDir() {
 			subDirStats := processDir(

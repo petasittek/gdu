@@ -1,13 +1,13 @@
 package main
 
 import (
-    "fmt"
+	"fmt"
 
-    "github.com/marcusolsson/tui-go"
+	"github.com/marcusolsson/tui-go"
 )
 
 func showDir(ui tui.UI, dirStats *DirInfo) {
-    root, list, status := CreateListWindow()
+	root, list, status := CreateListWindow()
 	ui.SetWidget(root)
 
 	status.SetText(
@@ -17,21 +17,21 @@ func showDir(ui tui.UI, dirStats *DirInfo) {
 			dirStats.itemCount,
 		))
 
-    if dirStats.parentDir != nil {
-        list.AppendRow(
-            tui.NewLabel(""),
-            tui.NewLabel(""),
-            tui.NewLabel("/.."),
-            tui.NewSpacer(),
-        )
-    }
+	if dirStats.parentDir != nil {
+		list.AppendRow(
+			tui.NewLabel(""),
+			tui.NewLabel(""),
+			tui.NewLabel("/.."),
+			tui.NewSpacer(),
+		)
+	}
 
-    biggestItemSize := int64(0)
-    if len(dirStats.items) > 0 {
-	    biggestItemSize = dirStats.items[0].size
-    }
+	biggestItemSize := int64(0)
+	if len(dirStats.items) > 0 {
+		biggestItemSize = dirStats.items[0].size
+	}
 
-    for _, item := range dirStats.items {
+	for _, item := range dirStats.items {
 		part := float64(item.size) / float64(biggestItemSize) * 10.0
 
 		list.AppendRow(
@@ -49,27 +49,27 @@ func showDir(ui tui.UI, dirStats *DirInfo) {
 
 	ui.SetKeybinding("PgUp", func() { list.Select(0) })
 	ui.SetKeybinding("PgDn", func() {
-        if dirStats.parentDir != nil {
-            list.Select(len(dirStats.items))
-        } else{
-            list.Select(len(dirStats.items) - 1)
-        }
-    })
+		if dirStats.parentDir != nil {
+			list.Select(len(dirStats.items))
+		} else {
+			list.Select(len(dirStats.items) - 1)
+		}
+	})
 
-    list.OnItemActivated(func(t *tui.Table){
-        index := t.Selected()
-        if dirStats.parentDir != nil {
-            if index == 0 {
-                showDir(ui, dirStats.parentDir)
-                return
-            } else {
-                index--
-            }
-        }
+	list.OnItemActivated(func(t *tui.Table) {
+		index := t.Selected()
+		if dirStats.parentDir != nil {
+			if index == 0 {
+				showDir(ui, dirStats.parentDir)
+				return
+			} else {
+				index--
+			}
+		}
 
-        item := dirStats.items[index]
-        if item.isDir {
-            showDir(ui, item.subDir)
-        }
-    })
+		item := dirStats.items[index]
+		if item.isDir {
+			showDir(ui, item.subDir)
+		}
+	})
 }
