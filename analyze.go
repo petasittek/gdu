@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"path"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -12,6 +12,7 @@ import (
 
 type ItemInfo struct {
 	name   string
+	path   string
 	size   int64
 	isDir  bool
 	subDir *DirInfo
@@ -68,13 +69,16 @@ func processDir(dir string, parentDir *DirInfo, statusChannel chan<- CurrentProg
 	}
 
 	for i, f := range files {
+		path, _ := filepath.Abs(filepath.Join(dir, f.Name()))
+
 		info := ItemInfo{
 			name: f.Name(),
 			isDir: f.IsDir(),
+			path: path,
 		}
 		if f.IsDir() {
 			subDirStats := processDir(
-				path.Join(dir, f.Name()),
+				filepath.Join(dir, f.Name()),
 				dirStats,
 				statusChannel,
 			)
@@ -87,7 +91,7 @@ func processDir(dir string, parentDir *DirInfo, statusChannel chan<- CurrentProg
 
 			select {
 			case statusChannel <- CurrentProgress{
-				currentItemName: f.Name(),
+				currentItemName: info.path,
 				itemCount:       dirStats.totalItemCount,
 				totalSize:       dirStats.totalSize,
 			}:
