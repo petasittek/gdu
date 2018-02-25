@@ -6,19 +6,32 @@ import (
     "github.com/marcusolsson/tui-go"
 )
 
-func showDir(ui tui.UI, dirStats DirInfo) {
+func showDir(ui tui.UI, dirStats *DirInfo) {
     root, list, status := CreateListWindow()
 	ui.SetWidget(root)
 
 	status.SetText(
 		fmt.Sprintf(
 			"Apparent size: %v Items: %d",
-			formatSize(dirStats.totalSize),
-			dirStats.totalItemCount,
+			formatSize(dirStats.size),
+			dirStats.itemCount,
 		))
 
-	biggestItemSize := dirStats.items[0].size
-	for _, item := range dirStats.items {
+    if dirStats.parentDir != nil {
+        list.AppendRow(
+            tui.NewLabel(""),
+            tui.NewLabel(""),
+            tui.NewLabel("/.."),
+            tui.NewSpacer(),
+        )
+    }
+
+    biggestItemSize := int64(0)
+    if len(dirStats.items) > 0 {
+	    biggestItemSize = dirStats.items[0].size
+    }
+
+    for _, item := range dirStats.items {
 		part := float64(item.size) / float64(biggestItemSize) * 10.0
 
 		list.AppendRow(
@@ -35,10 +48,26 @@ func showDir(ui tui.UI, dirStats DirInfo) {
 	}
 
 	ui.SetKeybinding("PgUp", func() { list.Select(0) })
-	ui.SetKeybinding("PgDn", func() { list.Select(len(dirStats.items) - 1) })
+	ui.SetKeybinding("PgDn", func() {
+        if dirStats.parentDir != nil {
+            list.Select(len(dirStats.items))
+        } else{
+            list.Select(len(dirStats.items) - 1)
+        }
+    })
 
     list.OnItemActivated(func(t *tui.Table){
-        item := dirStats.items[t.Selected()]
+        index := t.Selected()
+        if dirStats.parentDir != nil {
+            if index == 0 {
+                showDir(ui, dirStats.parentDir)
+                return
+            } else {
+                index--
+            }
+        }
+
+        item := dirStats.items[index]
         if item.isDir {
             showDir(ui, item.subDir)
         }
