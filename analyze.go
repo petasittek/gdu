@@ -54,15 +54,16 @@ func (a BySize) Less(i, j int) bool {
 func processDir(dir string, parentDir *DirInfo, statusChannel chan<- CurrentProgress) *DirInfo {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return new(DirInfo)
+		return &DirInfo{}
 	}
 
-	dirStats := new(DirInfo)
-	dirStats.items = make([]ItemInfo, len(files))
-	dirStats.size = 0
-	dirStats.itemCount = 0
-	dirStats.totalSize = parentDir.totalSize
-	dirStats.totalItemCount = parentDir.totalItemCount
+	dirStats := &DirInfo{
+		items: make([]ItemInfo, len(files)),
+		size: 0,
+		itemCount: 0,
+		totalSize: parentDir.totalSize,
+		totalItemCount: parentDir.totalItemCount,
+	}
 
 	if len(parentDir.items) > 0 {
 		dirStats.parentDir = parentDir
@@ -132,7 +133,7 @@ func processTopDir(dir string, ui tui.UI, currentItemLabel *tui.Label, statsLabe
 
 	go updateCurrentProgress(ui, currentItemLabel, statsLabel, statusChannel)
 
-	topDir := new(DirInfo)
+	topDir := &DirInfo{}
 
 	dirStats := processDir(
 		dir,
