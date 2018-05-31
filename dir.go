@@ -6,9 +6,18 @@ import (
 	"github.com/marcusolsson/tui-go"
 )
 
+var currentDir *DirInfo
+
 func showDir(ui tui.UI, dirStats *DirInfo) {
 	root, list, status := CreateListWindow()
+	currentDir = dirStats
 	ui.SetWidget(root)
+
+	ui.ClearKeybindings()
+	ui.SetKeybinding("Esc", func() { ui.Quit() })
+	ui.SetKeybinding("q", func() { ui.Quit() })
+	ui.SetKeybinding("h", func() { ShowHelpWindow(ui) })
+	ui.SetKeybinding("?", func() { ShowHelpWindow(ui) })
 
 	status.SetText(
 		fmt.Sprintf(

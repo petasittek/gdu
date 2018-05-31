@@ -38,7 +38,7 @@ func CreateListWindow() (tui.Widget, *tui.Table, *tui.StatusBar) {
 	status := tui.NewStatusBar("")
 
 	root := tui.NewVBox(
-		tui.NewLabel("gdu ~ Use arrow keys to navigate"),
+		tui.NewLabel("gdu ~ Use arrow keys to navigate, press ? for help"),
 		list,
 		tui.NewSpacer(),
 		status,
