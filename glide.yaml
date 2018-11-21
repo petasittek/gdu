@@ -1,4 +1,0 @@
-package: gdu
-import:
-- package: github.com/marcusolsson/tui-go
-  version: ~0.3.0

@@ -1,4 +1,4 @@
 PATH := .
 
 run:
-	/usr/bin/go run *.go $(PATH)
+	/usr/bin/go run $(PATH)
